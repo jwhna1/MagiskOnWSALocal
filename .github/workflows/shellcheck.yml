@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4  # 升级到v4版本
 
       - name: Set up QEMU
         uses: ./.github/actions/setup-qemu
@@ -60,7 +60,7 @@ jobs:
           push: true
 
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # 关键升级点
         with:
           name: wsa-${{ inputs.buildArch }}-${{ inputs.wsaVersion }}
           path: ./build/*.apk
