@@ -2,7 +2,7 @@ name: Issue moderator
 
 on:
   issues:
-    types: [opened]
+    types: [opened, reopened]  # 增加了 issues 重新打开时触发
   pull_request:
     types: [opened, edited]
 
@@ -20,6 +20,11 @@ jobs:
                 "type": "title",
                 "regex": ".*Short description.*",
                 "message": "You did not fill out the description in the title"
+              },
+              {
+                "type": "body",
+                "regex": ".*test.*",  # 新增的自动关闭规则，检查问题描述中是否包含 test 关键词
+                "message": "The issue contains the word 'test' in the body, please clarify your intention."
               }
             ]
           auto-close-ignore-label: do-not-autoclose
