@@ -1,25 +1,74 @@
-name: Shell checker
+name: Build WSA
 
 on:
-  push:
-    paths:
-      - '**.sh'
-      - '.github/workflows/shellcheck.yml'
-  pull_request:
-    paths:
-      - '**.sh'
-      - '.github/workflows/shellcheck.yml'
   workflow_dispatch:
+    inputs:
+      buildArch:
+        description: "选择构建架构"
+        required: true
+        type: choice
+        options:
+          - X64
+          - ARM64
+      wsaVersion:
+        description: "选择WSA版本"
+        required: true
+        type: choice
+        options:
+          - insider-fast
+          - insider-slow
+          - release
+      magiskVersion:
+        description: "选择Magisk版本"
+        required: true
+        type: choice
+        options:
+          - stable
+          - beta
+          - canary
 
 jobs:
-  shellcheck:
+  build-wsa:
     runs-on: ubuntu-latest
     steps:
-    - name : Checkout
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Run ShellCheck
-      id: check
-      uses: ludeeus/action-shellcheck@master
-      with:
-       scandir: './scripts'
+      - name: Set up QEMU
+        uses: ./.github/actions/setup-qemu
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build WSA image
+        id: build
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          tags: ${{ secrets.DOCKER_REPO }}:${{ github.sha }}
+          build-args: |
+            ARCH=${{ inputs.buildArch }}
+            WSA_CHANNEL=${{ inputs.wsaVersion }}
+            MAGISK_CHANNEL=${{ inputs.magiskVersion }}
+          push: true
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: wsa-${{ inputs.buildArch }}-${{ inputs.wsaVersion }}
+          path: ./build/*.apk
+          retention-days: 7
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./build/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
